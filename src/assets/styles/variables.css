@@ -1,0 +1,19 @@
+:root {
+  /* Font Weight */
+  --f-light: 300;
+  --f-regular: 400;
+  --f-medium: 500;
+  --f-semibold: 600;
+  --f-bold: 700;
+  /* Solid Colors */
+  --c-java: #15bac2;
+  --c-bermuda: #75d5d9;
+  --c-blue-chill: #0fa4ab;
+  --c-crimson: #c8124d;
+  --c-hibiscus: #c93364;
+  --c-shiraz: #ab063b;
+  --c-concrete: #f2f2f2;
+  --c-silver: #cacaca;
+  --c-silver-chalice: #acacac;
+  --c-mid-gray: #6e6e73;
+}
