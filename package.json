@@ -5,12 +5,18 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "deploy": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {
     "ant-design-vue": "^2.2.6",
+    "axios": "^0.24.0",
     "core-js": "^3.6.5",
+    "firebase": "^9.5.0",
+    "form-data": "^4.0.0",
+    "socket.io-client": "^4.4.0",
     "vue": "^3.0.0",
+    "vue-qrcode-reader": "^3.1.0-vue3-compatibility.2",
     "vue-router": "^4.0.0-0",
     "vuex": "^4.0.0-0"
   },
