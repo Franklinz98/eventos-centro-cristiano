@@ -7,7 +7,8 @@ export default abstract class EnrollmentInterface {
     email: string,
     event: string,
     amount: number,
-    currency: string
+    currency: string,
+    origin: string
   ): void;
 
   abstract preEnroll(attendee: Attendee, update: boolean, picture?: File): void;

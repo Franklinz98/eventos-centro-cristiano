@@ -68,14 +68,17 @@ export default defineComponent({
   outline: none;
 }
 
-.btn-container.light:hover,
-.btn-container.light:disabled {
+.btn-container.light:hover {
   background: var(--c-bermuda);
 }
 
-.btn-container.dark:hover,
-.btn-container.dark:disabled {
+.btn-container.dark:hover {
   background: var(--c-hibiscus);
+}
+
+.btn-container:disabled,
+.btn-container:disabled:hover {
+  background: var(--c-concrete);
 }
 
 .btn-container:disabled {

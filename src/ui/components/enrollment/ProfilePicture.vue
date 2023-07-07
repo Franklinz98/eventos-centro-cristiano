@@ -97,7 +97,7 @@ export default defineComponent({
   text-align: center;
 }
 .user-avatar {
-  --avatar-size: 15rem;
+  --avatar-size: 20rem;
   cursor: pointer;
   object-fit: cover;
   margin: 0 auto 2rem;
@@ -117,7 +117,7 @@ export default defineComponent({
 }
 @media only screen and (min-width: 1280px) {
   .user-avatar {
-    --avatar-size: 12rem;
+    --avatar-size: 16rem;
   }
 }
 </style>

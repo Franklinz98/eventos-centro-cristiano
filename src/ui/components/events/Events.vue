@@ -19,7 +19,7 @@
       title="CAFÉ EMPRENDER"
       description="Café emprender es el espacio que se brinda dentro de la convención a los emprendedores de la región, cuyo objetivo es ser apoyo en la construcción de líderes transformadores, que brinden a través de sus empresas un producto o servicio de calidad integral, que muestre la excelencia de quienes hacen lo que realmente aman porque han descubierto que eso que hacen es su propósito de vida, y no la solamente su estabilidad económica."
       place="Iglesia Centro Cristiano"
-      date="26 enero, 2022"
+      date="Por Determinar"
       @register="handleInscription('CE')"
     >
       <AspecRatioImage
@@ -46,11 +46,6 @@ export default defineComponent({
   methods: {
     handleInscription(id: EventType): void {
       this.$emit("inscription", id);
-      if (id === "R21") {
-        console.log("Signup Influyentes");
-      } else {
-        console.log("Signup Cafe Emprender");
-      }
     },
   },
 });

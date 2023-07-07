@@ -5,7 +5,7 @@
         class="modal-bckgnd"
         :source="
           require(`@/ui/assets/images/modal-${
-            event === 'R21' ? 'r21' : 'ce'
+            selectedEvent === 'R21' ? 'r21' : 'ce'
           }.jpg`)
         "
         alt="Inscripciones Centro Cristiano"
@@ -15,7 +15,7 @@
         <img
           :src="
             require(`@/ui/assets/images/${
-              event === 'R21' ? 'influyentes' : 'cafe-emprender'
+              selectedEvent === 'R21' ? 'influyentes' : 'cafe-emprender'
             }-logo.png`)
           "
           alt="Eventos Centro Cristiano"
@@ -35,7 +35,7 @@
       <a-spin :spinning="loading" v-if="formIndex === 0">
         <CriticalForm
           v-model="criticalData"
-          :event="event"
+          v-model:event="selectedEvent"
           @check-data="checkForm"
         />
       </a-spin>
@@ -89,9 +89,11 @@ export default defineComponent({
   mounted() {
     this.$nextTick(() => {
       this.socket = SocketIO.connectServer(
+        "https://eventos-cc-backend.herokuapp.com"
+      ); /* SocketIO.connectServer(
         "https://jovenes-cc-backend.herokuapp.com"
-      );
-      // SocketIO.connectServer("http://192.168.1.2:3005");
+      ); */
+      // SocketIO.connectServer("http://192.168.1.15:3005");
     });
   },
   emits: ["closeModal"],
@@ -104,6 +106,7 @@ export default defineComponent({
   },
   data() {
     return {
+      selectedEvent: this.event,
       formIndex: 0,
       userExist: false,
       socket: undefined as unknown as Socket,
@@ -120,14 +123,14 @@ export default defineComponent({
   },
   computed: {
     title(): string {
-      if (this.event === "R21") {
+      if (this.selectedEvent === "R21") {
         return "INSCRIPCIÓN INFLUYENTES: LA MISIÓN";
       } else {
         return "INSCRIPCIÓN CAFÉ EMPRENDER";
       }
     },
     cost(): string {
-      if (this.event === "R21") {
+      if (this.selectedEvent === "R21") {
         if (this.criticalData.mode === "F2F") {
           return this.criticalData.country === "CO" ? "$60.000" : "18 USD";
         }
@@ -141,16 +144,16 @@ export default defineComponent({
     async checkForm(): Promise<void> {
       this.loading = true;
       this.enrollment = EnrollmentManager.getEnrollmentInstance(
-        this.event,
+        this.selectedEvent,
         this.criticalData.mode,
         this.criticalData.country
       );
       const result = await EnrollmentManager.checkCriticalData(
         this.criticalData.email,
-        this.enrollment
+        this.enrollment,
+        this.criticalData.origin
       );
       this.signature = result.signature;
-      console.log(result);
       if (result.data) {
         this.detailsData = result.data;
         this.userExist = true;
@@ -166,23 +169,20 @@ export default defineComponent({
     async preEnroll(): Promise<void> {
       this.loading = true;
       const attendee = EnrollmentManager.generateAttendee(
-        this.event,
+        this.selectedEvent,
         this.criticalData,
         this.detailsData
       );
       const response = await EnrollmentManager.preEnroll(
         attendee,
-        this.userExist,
-        this.detailsData.picture
+        this.userExist
       );
-      console.log(response);
       if (response) {
         SocketIO.addListener(
           this.socket as Socket,
           `transaction-${attendee.id}`,
           (message): void => {
-            this.loading = false;
-            EnrollmentManager.preFetchCredential(message as string);
+            this.loading = !message;
             this.formIndex = 3;
           }
         );

@@ -9,11 +9,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "@vue/runtime-core";
+import { defineComponent } from "@vue/runtime-core";
 import ChatPreview from "@/ui/components/stream/ChatMessage.vue";
 import { ChatMessage } from "@/domain/interfaces/common";
 import { Socket } from "socket.io-client";
 import SocketIO from "@/data/services/socket-io";
+import { PropType } from "vue";
 
 export default defineComponent({
   name: "ChatView",

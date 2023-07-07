@@ -31,6 +31,7 @@
       <a-spin :spinning="loading" v-if="formIndex === 0">
         <CriticalForm
           v-model="criticalData"
+          v-model:event="event"
           :staff="true"
           @check-data="checkForm"
           @event-change="updateEvent"
@@ -85,9 +86,11 @@ export default defineComponent({
   mounted() {
     this.$nextTick(() => {
       this.socket = SocketIO.connectServer(
+        "https://eventos-cc-backend.herokuapp.com"
+      ); /* SocketIO.connectServer(
         "https://jovenes-cc-backend.herokuapp.com"
-      );
-      // SocketIO.connectServer("http://192.168.1.2:3005");
+      ); */
+      // SocketIO.connectServer("http://192.168.1.15:3005");
     });
   },
   emits: ["closeModal"],
@@ -104,7 +107,7 @@ export default defineComponent({
       formIndex: 0,
       userExist: false,
       socket: undefined as unknown as Socket,
-      criticalData: EnrollmentManager.defaultCriticalData,
+      criticalData: EnrollmentManager.defaultStaffCriticalData,
       detailsData: EnrollmentManager.defaultDetailsData,
       enrollment: EnrollmentManager.getEnrollmentInstance("R21", "F2F", "CO"),
       loading: false,
@@ -119,9 +122,25 @@ export default defineComponent({
       }
     },
     cost(): string {
-      if (this.event === "R21") {
+      if (this.criticalData.origin === "premio") {
+        return this.criticalData.country === "CO" ? "$0" : "0 USD";
+      } else if (this.event === "R21") {
         if (this.criticalData.mode === "F2F") {
-          return this.criticalData.country === "CO" ? "$60.000" : "18 USD";
+          switch (this.criticalData.origin) {
+            case "congregacion":
+              return "$50.000";
+            case "bono":
+              return "$40.000";
+            default:
+              if (
+                ["L", "M", "X", "J", "V", "S"].includes(
+                  this.criticalData.origin
+                )
+              ) {
+                return "$15.000";
+              }
+              return this.criticalData.country === "CO" ? "$60.000" : "18 USD";
+          }
         }
         return this.criticalData.country === "CO" ? "$30.000" : "9 USD";
       } else {
@@ -131,7 +150,6 @@ export default defineComponent({
   },
   methods: {
     updateEvent(event: EventType): void {
-      console.log(event);
       this.event = event;
     },
     async checkForm(): Promise<void> {
@@ -143,9 +161,9 @@ export default defineComponent({
       );
       const result = await EnrollmentManager.checkCriticalData(
         this.criticalData.email,
-        this.enrollment
+        this.enrollment,
+        this.criticalData.origin
       );
-      console.log(result);
       if (result.data) {
         this.detailsData = result.data;
         this.userExist = true;
@@ -167,15 +185,14 @@ export default defineComponent({
       );
       let response = await EnrollmentManager.preEnroll(
         attendee,
-        this.userExist,
-        this.detailsData.picture
+        this.userExist
       );
       if (response) {
         response = await EnrollmentManager.staffEnroll(
           attendee,
-          this.enrollment
+          this.enrollment,
+          this.criticalData.origin
         );
-        console.log(response);
         if (response) {
           this.loading = false;
           this.formIndex = 3;
@@ -204,7 +221,8 @@ export default defineComponent({
 }
 
 .modal-bckgnd {
-  --aspect-ratio: calc(3 / 2 * 100%);
+  --aspect-ratio: 0;
+  height: 100%;
 }
 
 .modal-bckgnd,
@@ -287,7 +305,8 @@ export default defineComponent({
   }
 
   .modal-bckgnd {
-    --aspect-ratio: calc(2 / 3 * 100%);
+    --aspect-ratio: 0;
+    height: 100%;
   }
 
   .modal-bckgnd,

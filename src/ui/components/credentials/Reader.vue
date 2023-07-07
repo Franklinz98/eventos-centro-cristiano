@@ -18,18 +18,29 @@
           />
         </div>
         <div class="reader-result" v-else>
+          <img class="user-avatar" :src="userPic" alt="Foto de Perfil" />
           <h2 class="pass-holder">{{ name }}</h2>
           <h3 class="pass-id">{{ id }}</h3>
           <h3 class="pass-email">{{ email }}</h3>
-          <h2 class="pass-events">EVENTOS AUTORIZADOS</h2>
+          <h2 class="pass-events" v-if="valid">
+            EVENTOS AUTORIZADOS: {{ state }}
+          </h2>
+          <h2 class="pass-events" v-else>{{ state }}</h2>
           <div class="auth-events">
-            <div class="pass-event" v-if="r21">
+            <div class="pass-event" v-if="(r21 || ce) && valid">
               <i class="las la-globe-americas"></i>
               <h3 class="event-title">Influyentes - La Misión</h3>
             </div>
-            <div class="pass-event" v-if="ce">
+            <h3 class="event-title" v-if="(r21 || ce) && valid && authDays">
+              {{ authDays }}
+            </h3>
+            <div class="pass-event" v-if="ce && valid">
               <i class="las la-coffee"></i>
               <h3 class="event-title">Café Emprender</h3>
+            </div>
+            <div class="pass-event" v-if="!valid">
+              <i class="las la-ban"></i>
+              <h3 class="event-title">Ha hecho check-in recientemente.</h3>
             </div>
           </div>
           <BaseButton
@@ -49,6 +60,8 @@ import { defineComponent } from "vue";
 import { QrcodeStream } from "vue-qrcode-reader";
 import BaseButton from "@/ui/components/common/BaseButton.vue";
 import CredentialsManager from "@/domain/use_cases/credentials-manager";
+import FirebaseAuth from "@/data/services/firebase-auth";
+import PopUpMessage, { NotificationType } from "@/domain/models/popup";
 
 export default defineComponent({
   name: "EntryPassReader",
@@ -56,16 +69,52 @@ export default defineComponent({
     QrcodeStream,
     BaseButton,
   },
+  async mounted() {
+    const online = navigator.onLine;
+    if (online) {
+      const claims = (await FirebaseAuth.getClaims(true)) ?? {};
+      this.clearance = claims.clearance;
+    } else {
+      let message = new PopUpMessage({
+        title: "No estas conectado",
+        message: "Conectate para continuar",
+        type: NotificationType.Error,
+      });
+      message.show();
+    }
+  },
   data() {
     return {
+      state: "",
+      clearance: "",
       reading: true,
       loading: false,
-      name: "JOHN DOE",
-      id: "CC 12346579",
+      name: "",
+      id: "",
       r21: "",
       ce: "",
-      email: "test@text.com",
+      email: "",
+      picture: "",
+      days: [] as Array<string>,
+      dayNames: {
+        L: "Lunes",
+        M: "Martes",
+        X: "Miércoles",
+        J: "Jueves",
+        V: "Viernes",
+        S: "Sábado",
+      } as Record<string, string>,
+      valid: false,
     };
+  },
+  computed: {
+    userPic(): string {
+      return `https://storage.googleapis.com/eventos-5d8d7.appspot.com/attendee/${this.picture}`;
+    },
+    authDays(): string {
+      let names = this.days.map((day) => this.dayNames[day]);
+      return names.join(", ");
+    },
   },
   methods: {
     async onInit(
@@ -85,13 +134,32 @@ export default defineComponent({
       }
     },
     async onDecode(decodedData: string) {
+      this.loading = true;
+      console.log(decodedData);
       const json = JSON.parse(decodedData);
       this.name = json["name"];
       this.id = json["id"];
       this.r21 = json["r21"];
       this.ce = json["ce"];
       this.email = json["email"];
-      await CredentialsManager.checkInAttendee(this.email);
+      this.picture = json["picture"];
+      this.days = await CredentialsManager.authDays(this.email);
+      this.valid = await CredentialsManager.validatePass(this.email);
+      if (["admin", "staff"].includes(this.clearance)) {
+        if (this.valid) {
+          if (["admin", "staff"].includes(this.clearance)) {
+            console.log("This pass is valid, checking in");
+            await CredentialsManager.checkInAttendee(this.email);
+            this.state = "INGRESANDO";
+          }
+        } else {
+          console.log("This pass is invalid");
+          await CredentialsManager.checkOutAttendee(this.email);
+          this.state = "SALIENDO...";
+        }
+      }
+
+      this.loading = false;
       this.reading = false;
     },
     scanAgain(): void {
@@ -102,6 +170,11 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.user-avatar {
+  --avatar-size: 16rem;
+  margin-bottom: 2rem;
+}
+
 .reader-cntr {
   font-family: "Poppins", sans-serif !important;
   text-align: center;
@@ -188,6 +261,10 @@ export default defineComponent({
 .pass-event > .las {
   color: var(--c-java);
   font-size: 24px;
+}
+
+.pass-event > .la-ban {
+  color: var(--c-crimson);
 }
 
 .pass-event > .event-title {

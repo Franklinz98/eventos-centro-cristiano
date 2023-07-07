@@ -20,6 +20,7 @@
       text="INGRESAR"
       :isSmall="true"
       :dark="true"
+      :disabled="false"
       @click="handleLogin"
     />
   </div>

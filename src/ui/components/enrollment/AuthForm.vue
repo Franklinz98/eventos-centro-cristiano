@@ -16,7 +16,13 @@
       placeholder="Número de Identificación"
     />
   </form>
-  <BaseButton text="Entrar" :isSmall="true" :dark="true" @click="login" />
+  <BaseButton
+    text="Entrar"
+    :isSmall="true"
+    :dark="true"
+    :disabled="v$.$invalid"
+    @click="login"
+  />
 </template>
 
 <script lang="ts">
@@ -24,9 +30,14 @@ import { defineComponent, PropType } from "vue";
 import BaseField from "@/ui/components/common/BaseField.vue";
 import BaseButton from "@/ui/components/common/BaseButton.vue";
 import { AuthData } from "@/domain/interfaces/enrollment";
+import useVuelidate from "@vuelidate/core";
+import { required, numeric, email } from "@vuelidate/validators";
 
 export default defineComponent({
   name: "AuthDetails",
+  setup() {
+    return { v$: useVuelidate() };
+  },
   components: {
     BaseField,
     BaseButton,
@@ -52,6 +63,15 @@ export default defineComponent({
     login(): void {
       this.$emit("authenticate");
     },
+  },
+  validations() {
+    const validId = () => this.value.id.toString().length >= 6;
+    return {
+      value: {
+        id: { required, numeric, validId },
+        email: { required, email },
+      },
+    };
   },
 });
 </script>

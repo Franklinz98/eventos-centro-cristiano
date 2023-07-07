@@ -3,7 +3,7 @@
     <div class="modal-img">
       <AspecRatioImage
         class="modal-bckgnd"
-        :source="require('@/ui/assets/images/modal-r21.jpg')"
+        :source="require(`@/ui/assets/images/modal-r21.jpg`)"
         alt="Inscripciones Centro Cristiano"
       />
       <div class="modal-bckdp" />
@@ -13,17 +13,13 @@
           alt="Eventos Centro Cristiano"
           class="eventos-logo"
         />
-        <h1 class="modal-title">INGRESA A TU CUENTA</h1>
-        <div>
-          <h2 class="modal-subtitle">NECESITAMOS CONFIRMAR QUE ERES TU</h2>
-          <p class="modal-description">
-            Ingresa los siguientes datos para acceder.
-          </p>
-        </div>
+        <h1 class="modal-title">CAMBIA TU FOTO</h1>
       </div>
     </div>
-    <div class="modal-cnt">
-      <AuthForm v-model="authData" @authenticate="authenticate" />
+    <div class="modal-cnt" ref="modal-content">
+      <a-spin :spinning="loading">
+        <PhotoForm v-model="photoData" @upload-photo="uploadPic" />
+      </a-spin>
     </div>
   </div>
 </template>
@@ -31,59 +27,52 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import AspecRatioImage from "@/ui/components/common/AspecRatioImg.vue";
-import { AuthData } from "@/domain/interfaces/enrollment";
-import AuthForm from "@/ui/components/enrollment/AuthForm.vue";
-import FirebaseAuth from "@/data/services/firebase-auth";
-import NavigationManager, {
-  Routes,
-} from "@/domain/use_cases/navigation-manager";
+import { PhotoData } from "@/domain/interfaces/enrollment";
+import PhotoForm from "@/ui/components/enrollment/PhotoForm.vue";
+import EnrollmentManager from "@/domain/use_cases/enrollment-manager";
 import PopUpMessage, { NotificationType } from "@/domain/models/popup";
 
 export default defineComponent({
-  name: "AuthModal",
+  name: "PhotoModal",
   components: {
     AspecRatioImage,
-    AuthForm,
+    PhotoForm,
+  },
+  props: {
+    email: {
+      type: String,
+      required: true,
+    },
+    picture: {
+      type: String,
+      required: false,
+    },
   },
   emits: ["closeModal"],
   data() {
     return {
-      storage: window.localStorage,
-      authData: {} as AuthData,
+      photoData: { profilePic: this.picture ?? "" } as PhotoData,
+      loading: false,
     };
   },
   methods: {
-    async authenticate(): Promise<void> {
-      let role: string | undefined = undefined;
-      let loggedIn = await FirebaseAuth.login(
-        this.authData.email,
-        this.authData.id.toString()
+    async uploadPic(): Promise<void> {
+      this.loading = true;
+      let result = await EnrollmentManager.uploadPhoto(
+        this.email,
+        this.photoData.picture,
+        this.picture
       );
-      if (loggedIn) {
-        this.storage.setItem("cc-evt-auth", JSON.stringify(true));
-        const claims = (await FirebaseAuth.getClaims(true)) ?? {};
-        role = claims.clearance;
-      }
-      if (role) {
-        this.storage.setItem("cc-evt-role", role);
-      } else {
-        this.storage.removeItem("cc-evt-role");
-      }
-      console.log("online");
-      console.log(loggedIn);
-      console.log(role);
-
-      if (loggedIn) {
-        NavigationManager.goTo(Routes.Stream);
-        this.$emit("closeModal");
-      } else {
+      this.loading = false;
+      if (!result) {
         const popup = new PopUpMessage({
-          title: "Ocurrio un error",
-          message: "Intentalo de nuevo...",
+          title: "Error",
+          message: "Hubo un error, intentalo de nuevo",
           type: NotificationType.Error,
         });
         popup.show();
       }
+      this.$emit("closeModal", result);
     },
   },
 });
@@ -106,7 +95,6 @@ export default defineComponent({
 
 .modal-bckgnd,
 .modal-bckgnd > :deep().ratio-fill {
-  --aspect-ratio: calc(3 / 2 * 100%);
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
 }
@@ -169,10 +157,13 @@ export default defineComponent({
 .modal-cnt {
   box-sizing: border-box;
   padding: 3rem;
-  align-items: center;
   justify-content: center;
   flex-flow: column;
   display: flex;
+}
+
+:deep().ant-spin-container {
+  text-align: center;
 }
 
 @media only screen and (max-width: 767px) {
@@ -182,7 +173,7 @@ export default defineComponent({
   }
 
   .modal-bckgnd {
-    --aspect-ratio: calc(1.5 / 3 * 100%);
+    --aspect-ratio: calc(1.75 / 3 * 100%);
   }
 
   .modal-bckgnd,

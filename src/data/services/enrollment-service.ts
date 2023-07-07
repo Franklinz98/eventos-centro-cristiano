@@ -1,14 +1,27 @@
-import { SignatureResponse } from "@/domain/interfaces/enrollment";
+import { Origin, SignatureResponse } from "@/domain/interfaces/enrollment";
 import Attendee from "@/domain/models/attendee";
 import Enrollment from "@/domain/models/enrollments";
 import EnrollmentInterface from "@/domain/services/enrollment-service";
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import FormData from "form-data";
 import path from "path";
+import FirebaseAuth from "./firebase-auth";
 
 export default class EnrollmentService implements EnrollmentInterface {
-  // private static readonly host = "http://192.168.1.2:3005";
-  private static readonly host = "https://jovenes-cc-backend.herokuapp.com";
+  // private static readonly host = "http://192.168.1.15:3005";
+  // private static readonly host = "https://jovenes-cc-backend.herokuapp.com";
+  private static readonly host = "https://eventos-cc-backend.herokuapp.com";
+
+  async getSeats(): Promise<number> {
+    try {
+      const response = await axios.get(
+        `${EnrollmentService.host}/credentials/seats`
+      );
+      return response.data.seats;
+    } catch (error) {
+      return 0;
+    }
+  }
 
   // Attendee: Exists on other event
   // true: Doesn't exists, continue.
@@ -17,7 +30,8 @@ export default class EnrollmentService implements EnrollmentInterface {
     email: string,
     event: string,
     amount: number,
-    currency: string
+    currency: string,
+    origin: string
   ): Promise<
     | {
         signature: SignatureResponse;
@@ -31,13 +45,13 @@ export default class EnrollmentService implements EnrollmentInterface {
       event,
       amount,
       currency,
+      origin,
     };
     try {
       const response = await axios.post(
         `${EnrollmentService.host}/enrollment/check`,
         data
       );
-      console.log(response.data);
       if (response.data.data) {
         return {
           signature: response.data.signature,
@@ -66,7 +80,6 @@ export default class EnrollmentService implements EnrollmentInterface {
         `${EnrollmentService.host}/media/get-embed`,
         config
       );
-      console.log(response.data.result);
       return response.data.result;
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -74,27 +87,14 @@ export default class EnrollmentService implements EnrollmentInterface {
     }
   }
 
-  async preEnroll(
-    attendee: Attendee,
-    update: boolean,
-    picture?: File
-  ): Promise<boolean> {
+  async preEnroll(attendee: Attendee, update: boolean): Promise<boolean> {
     try {
-      const data = new FormData();
-      data.append("enrollment", JSON.stringify(attendee.enrollment));
-      data.append("data", JSON.stringify(attendee.json));
-      data.append("update", update);
-      if (picture) {
-        data.append(
-          "picture",
-          picture,
-          `${attendee.name}${path.extname(picture.name)}`
-        );
-      }
+      const data = {
+        enrollment: JSON.stringify(attendee.enrollment),
+        data: JSON.stringify(attendee.json),
+        update: update,
+      };
       const config = {
-        headers: {
-          "Content-Type": `multipart/form-data; boundary=${data.getBoundary}`,
-        },
         onUploadProgress: (progressEvent) => console.log(progressEvent.loaded),
       } as AxiosRequestConfig;
       const response = await axios.post(
@@ -102,29 +102,70 @@ export default class EnrollmentService implements EnrollmentInterface {
         data,
         config
       );
-      console.log(response.data.result);
       return response.data.result;
     } catch (error) {
-      console.log(error);
+      return false;
+    }
+  }
+
+  async uploadsPhoto(
+    email: string,
+    picture: File,
+    oldPic?: string
+  ): Promise<boolean> {
+    try {
+      const data = new FormData();
+      data.append("email", email);
+      if (oldPic) {
+        data.append("oldPicture", oldPic);
+      }
+      data.append(
+        "picture",
+        picture,
+        `${picture.name}${path.extname(picture.name)}`
+      );
+      const token = (await FirebaseAuth.currentUser?.getIdToken(true)) ?? "";
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": `multipart/form-data; boundary=${data.getBoundary}`,
+        },
+        onUploadProgress: (progressEvent) => console.log(progressEvent.loaded),
+      } as AxiosRequestConfig;
+      await axios.post(
+        `${EnrollmentService.host}/enrollment/update-photo`,
+        data,
+        config
+      );
+      return true;
+    } catch (error) {
       return false;
     }
   }
 
   async staffEnroll(
     attendee: Attendee,
-    enrollment: Enrollment
+    enrollment: Enrollment,
+    origin: Origin
   ): Promise<boolean> {
     try {
+      const token = (await FirebaseAuth.currentUser?.getIdToken(true)) ?? "";
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      } as AxiosRequestConfig;
       const data = {
         email: attendee.email,
         currency: enrollment.cost.currency,
         value: enrollment.cost.amount,
+        origin: origin,
       };
-      const response = await axios.post(
+      await axios.post(
         `${EnrollmentService.host}/enrollment/cash-confirm`,
-        data
+        data,
+        config
       );
-      console.log(response.data);
       return true;
     } catch (error) {
       return false;
@@ -138,13 +179,12 @@ export default class EnrollmentService implements EnrollmentInterface {
   ): HTMLFormElement {
     const hiddenForm = document.createElement("form");
     hiddenForm.className += "hidden-form";
-    hiddenForm.action =
-      "https://sandbox.checkout.payulatam.com/ppp-web-gateway-payu/";
+    hiddenForm.action = "https://checkout.payulatam.com/ppp-web-gateway-payu";
     hiddenForm.method = "POST";
     hiddenForm.target = "_blank";
     const data: Record<string, number | string | boolean> = {
-      merchantId: 508029,
-      accountId: 512321,
+      merchantId: 536775,
+      accountId: 538789,
       referenceCode: signature.reference,
       description: `Inscripción - ${enrollment.eventName} - ${attendee.id}`,
       currency: enrollment.cost.currency,
@@ -152,7 +192,7 @@ export default class EnrollmentService implements EnrollmentInterface {
       tax: 0,
       taxReturnBase: 0,
       signature: signature.hash,
-      test: true,
+      test: false,
       buyerFullName: `${attendee.name} ${attendee.lastname}`,
       buyerEmail: attendee.email,
       payerDocument: attendee.id,
@@ -166,7 +206,6 @@ export default class EnrollmentService implements EnrollmentInterface {
       input.hidden = true;
       hiddenForm.appendChild(input);
     }
-    console.log(hiddenForm);
     return hiddenForm;
   }
 }

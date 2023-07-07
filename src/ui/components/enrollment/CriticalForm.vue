@@ -1,5 +1,11 @@
 <template>
   <form action="" method="post" class="enrollment-form">
+    <h3
+      class="seats all columns"
+      v-if="eventValue == 'R21' && value.mode === 'F2F'"
+    >
+      <b>CUPOS DISPONIBLES: {{ seats }}</b>
+    </h3>
     <BaseField
       class="half"
       v-model="value.mode"
@@ -29,10 +35,18 @@
     />
     <BaseField
       class="half"
-      v-model="selectedEvent"
+      v-model="eventValue"
       type="select"
       label="Evento:"
       :options="eventOptions"
+      v-if="staff"
+    />
+    <BaseField
+      class="half"
+      v-model="value.origin"
+      type="select"
+      label="Tipo de Registro:"
+      :options="originOptions"
       v-if="staff"
     />
     <BaseField
@@ -48,20 +62,29 @@
       type="select"
       label="LevelUp:"
       :options="levelUpOptions"
-      v-if="event === 'R21'"
+      v-if="eventValue === 'R21'"
     />
     <BaseField
       class="half"
+      v-model="congResp"
+      type="select"
+      label="Perteneces a una Congregación:"
+      :options="congregationOptions"
+      v-if="eventValue === 'R21'"
+    />
+    <BaseField
+      :class="{ half: staff, all: !staff }"
       v-model="value.group"
       type="text"
-      label="Renovación 21:"
-      v-if="event === 'R21'"
+      label="Congregación:"
+      v-if="eventValue === 'R21' && congResp === 'SI'"
     />
   </form>
   <BaseButton
     text="Siguiente"
     :isSmall="true"
     :dark="true"
+    :disabled="v$.$invalid"
     @click="checkData"
   />
 </template>
@@ -71,9 +94,15 @@ import { defineComponent, PropType } from "vue";
 import BaseField from "@/ui/components/common/BaseField.vue";
 import BaseButton from "@/ui/components/common/BaseButton.vue";
 import { CriticalData, EventType } from "@/domain/interfaces/enrollment";
+import useVuelidate from "@vuelidate/core";
+import { required, numeric, email } from "@vuelidate/validators";
+import EnrollmentManager from "@/domain/use_cases/enrollment-manager";
 
 export default defineComponent({
   name: "CriticalDetails",
+  setup() {
+    return { v$: useVuelidate() };
+  },
   components: {
     BaseField,
     BaseButton,
@@ -89,10 +118,23 @@ export default defineComponent({
     },
     event: {
       type: String as PropType<EventType>,
-      default: "R21",
+      required: true,
     },
   },
-  emits: ["update:modelValue", "checkData", "eventChange"],
+  mounted() {
+    this.$nextTick(async () => {
+      this.seats = await EnrollmentManager.getSeats();
+      if (this.staff) {
+        this.originOptions["L"] = "Diario - Lunes";
+        this.originOptions["M"] = "Diario - Martes";
+        this.originOptions["X"] = "Diario - Miércoles";
+        this.originOptions["J"] = "Diario - Jueves";
+        this.originOptions["V"] = "Diario - Viernes";
+        this.originOptions["S"] = "Diario - Sábado";
+      }
+    });
+  },
+  emits: ["update:modelValue", "update:event", "checkData", "eventChange"],
   watch: {
     selectedEvent: function () {
       if (this.staff) {
@@ -102,10 +144,20 @@ export default defineComponent({
   },
   data() {
     return {
-      selectedEvent: this.event,
+      congResp: "SI",
       eventOptions: {
         R21: "Influyentes",
         CE: "Café Emprender",
+      },
+      originOptions: {
+        efectivo: "Efectivo",
+        congregacion: "Congregación",
+        bono: "Bono Especial",
+        premio: "Premio",
+      } as Record<string, string>,
+      congregationOptions: {
+        SI: "Si",
+        NO: "No",
       },
       modeOptions: {
         F2F: "Presencial",
@@ -121,6 +173,7 @@ export default defineComponent({
         CU: "Cuba",
         DO: "República Dominicana",
         EC: "Ecuador",
+        US: "Estados Unidos",
         SV: "El Salvador",
         ES: "España",
         GT: "Guatemala",
@@ -151,6 +204,7 @@ export default defineComponent({
         PAS: "Pasaporte",
         NIT: "NIT",
       },
+      seats: 0,
     };
   },
   computed: {
@@ -162,11 +216,86 @@ export default defineComponent({
         this.$emit("update:modelValue", value);
       },
     },
+    eventValue: {
+      get(): EventType {
+        return this.event;
+      },
+      set(value: EventType): void {
+        this.$emit("update:event", value);
+      },
+    },
   },
   methods: {
     checkData(): void {
       this.$emit("checkData");
     },
+  },
+  validations() {
+    const validId = () => this.value.id.toString().length >= 6;
+    const validCongregation = () =>
+      (this.eventValue === "R21" &&
+        this.congResp === "SI" &&
+        this.value.group) ||
+      (this.eventValue === "R21" && this.congResp === "NO") ||
+      this.eventValue === "CE";
+    const availableSeats = () => {
+      if (this.eventValue === "R21" && this.value.mode === "F2F") {
+        return this.seats > 0;
+      } else {
+        return true;
+      }
+    };
+    const validOrigin = () => {
+      if (this.value.origin) {
+        switch (this.value.origin) {
+          case "L":
+            return (
+              this.event === "R21" &&
+              Date.now() < Date.parse("Jan 03 2022 23:59:00 GMT-0500")
+            );
+          case "M":
+            return (
+              this.event === "R21" &&
+              Date.now() < Date.parse("Jan 04 2022 23:59:00 GMT-0500")
+            );
+          case "X":
+            return (
+              this.event === "R21" &&
+              Date.now() < Date.parse("Jan 05 2022 23:59:00 GMT-0500")
+            );
+          case "J":
+            return (
+              this.event === "R21" &&
+              Date.now() < Date.parse("Jan 06 2022 23:59:00 GMT-0500")
+            );
+          case "V":
+            return (
+              this.event === "R21" &&
+              Date.now() < Date.parse("Jan 07 2022 23:59:00 GMT-0500")
+            );
+          case "S":
+            return (
+              this.event === "R21" &&
+              Date.now() < Date.parse("Jan 08 2022 23:59:00 GMT-0500")
+            );
+          default:
+            return true;
+        }
+      }
+      ["L", "M", "X", "J", "V", "S"].includes(this.value.origin);
+    };
+    return {
+      value: {
+        mode: { required, availableSeats },
+        country: { required },
+        idType: { required },
+        id: { required, numeric, validId },
+        email: { required, email },
+        lvlup: { required },
+        group: { validCongregation },
+        origin: { validOrigin },
+      },
+    };
   },
 });
 </script>
@@ -222,5 +351,11 @@ export default defineComponent({
 
 .all.columns {
   grid-column: span 6;
+}
+
+.seats {
+  color: var(--c-crimson);
+  text-align: center;
+  font-size: 1.8rem;
 }
 </style>

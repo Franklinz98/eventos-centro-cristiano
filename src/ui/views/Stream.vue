@@ -46,11 +46,12 @@ export default defineComponent({
     Error,
   },
   created() {
-    this.socket =
-      /* SocketIO.connectServer(
-      "https://jovenes-cc-backend.herokuapp.com"
-    ); */
-      SocketIO.connectServer("http://192.168.1.2:3005");
+    if (navigator.onLine) {
+      this.socket = SocketIO.connectServer(
+        "https://eventos-cc-backend.herokuapp.com"
+      );
+      // SocketIO.connectServer("http://192.168.1.2:3005");
+    }
   },
   mounted() {
     this.$nextTick(async () => {
@@ -70,13 +71,16 @@ export default defineComponent({
         "stream-focus",
         FirebaseAuth.currentUser?.uid ?? ""
       );
-      const claims = await FirebaseAuth.getClaims();
+      const claims = await FirebaseAuth.getClaims(true);
       if (claims.checkIn) {
         const checkIn = claims.checkIn as number;
         const now = Date.now();
         if (now - checkIn < 4 * 60 * 60 * 1000) {
           this.streamError = "time";
         }
+      }
+      if (!claims.CE) {
+        delete this.eventOptions.CE;
       }
     });
   },
@@ -87,7 +91,6 @@ export default defineComponent({
   watch: {
     event: {
       handler(): void {
-        console.log("watch");
         this.fetchData();
       },
     },
@@ -103,7 +106,7 @@ export default defineComponent({
       eventOptions: {
         R21: "Influyentes",
         CE: "Café Emprender",
-      },
+      } as Record<string, string>,
       messageContent: "",
     };
   },
@@ -111,7 +114,6 @@ export default defineComponent({
     fetchData(): void {
       this.fetchingData = true;
       EnrollmentManager.fetchEmbed(this.event).then((embed) => {
-        console.log(embed);
         this.fetchingData = false;
         this.embed = embed;
       });
@@ -181,5 +183,23 @@ export default defineComponent({
   left: 0;
   border-radius: 8px;
   position: absolute !important;
+}
+
+@media only screen and (max-width: 1280px) {
+  .stm-cntr {
+    grid-template-columns: auto;
+  }
+
+  .stm-opt {
+    height: auto;
+  }
+}
+
+@media only screen and (max-width: 767px) {
+  .stm-cntr {
+    padding: 3rem;
+    padding-top: 7rem;
+    grid-template-columns: auto;
+  }
 }
 </style>

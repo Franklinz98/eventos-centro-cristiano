@@ -23,7 +23,6 @@ export default defineComponent({
     route(): string {
       const route = this.$route.name;
       if (route) {
-        console.log(route.toString());
         return route.toString();
       }
       return "Home";

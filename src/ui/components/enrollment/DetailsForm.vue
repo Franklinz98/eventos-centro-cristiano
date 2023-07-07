@@ -1,5 +1,4 @@
 <template>
-  <ProfilePic v-model="value.picture" :profilePic="value.profilePic" />
   <form action="" method="post" class="enrollment-form">
     <BaseField
       class="half"
@@ -40,22 +39,26 @@
     text="Confirmar"
     :isSmall="true"
     :dark="true"
+    :disabled="v$.$invalid"
     @click="confirmEnroll"
   />
 </template>
 
 <script lang="ts">
 import { defineComponent } from "@vue/runtime-core";
-import ProfilePic from "@/ui/components/enrollment/ProfilePicture.vue";
 import BaseField from "@/ui/components/common/BaseField.vue";
 import BaseButton from "@/ui/components/common/BaseButton.vue";
 import { PropType } from "vue";
 import { DetailsData } from "@/domain/interfaces/enrollment";
+import useVuelidate from "@vuelidate/core";
+import { required } from "@vuelidate/validators";
 
 export default defineComponent({
   name: "DetailsForm",
+  setup() {
+    return { v$: useVuelidate() };
+  },
   components: {
-    ProfilePic,
     BaseField,
     BaseButton,
   },
@@ -84,6 +87,17 @@ export default defineComponent({
     confirmEnroll(): void {
       this.$emit("confirmEnroll");
     },
+  },
+  validations() {
+    return {
+      value: {
+        name: { required },
+        lastname: { required },
+        address: { required },
+        city: { required },
+        whatsapp: { required },
+      },
+    };
   },
 });
 </script>

@@ -11,10 +11,10 @@ export default class FirebaseAuth {
   }
 
   // eslint-disable-next-line
-  static async getClaims(): Promise<Record<string, any>> {
+  static async getClaims(force: boolean): Promise<Record<string, any>> {
     const user = Firebase.authInstance.currentUser;
     if (user) {
-      const idTokenResult = await user.getIdTokenResult(true);
+      const idTokenResult = await user.getIdTokenResult(force);
       return idTokenResult.claims;
     }
     return {};
@@ -31,5 +31,6 @@ export default class FirebaseAuth {
 
   static async signOut(): Promise<void> {
     await Firebase.authInstance.signOut();
+    window.localStorage.setItem("cc-evt-auth", JSON.stringify(false));
   }
 }

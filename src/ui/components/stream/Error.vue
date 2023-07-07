@@ -1,13 +1,15 @@
 <template>
   <div class="err-cntr">
-    <i class="las la-exchange-alt" v-if="error === 'focus'"></i>
-    <i class="las la-stopwatch" v-else></i>
+    <!-- <i class="las la-exchange-alt" v-if="error === 'focus'"></i>
+    <i class="las la-stopwatch" v-else></i> -->
+    <i class="las la-calendar-check"></i>
     <h2 class="err-msg">
-      {{
+      Pronto estará disponible nuestra transmisión...
+      <!-- {{
         error === "focus"
           ? "Otra instancia de la plataforma solicito la transmisión"
           : "Realizaste check-in hace poco tiempo con tu credencial"
-      }}
+      }} -->
     </h2>
   </div>
 </template>

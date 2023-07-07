@@ -44,6 +44,7 @@ import {
   NavigationManager,
   Routes,
 } from "@/domain/use_cases/navigation-manager";
+import PopUpMessage, { NotificationType } from "@/domain/models/popup";
 
 export default defineComponent({
   name: "Home",
@@ -60,6 +61,7 @@ export default defineComponent({
       showInscription: false,
       showAuth: false,
       eventEnrollment: "R21" as EventType,
+      storage: window.localStorage,
     };
   },
   methods: {
@@ -68,12 +70,30 @@ export default defineComponent({
       this.showInscription = true;
     },
     handleAuth(): void {
-      const loggedIn = FirebaseAuth.checkAuth();
-      console.log(loggedIn);
-      if (loggedIn) {
-        NavigationManager.goTo(Routes.Stream);
+      const online = navigator.onLine;
+      if (online) {
+        const loggedIn = FirebaseAuth.checkAuth();
+        if (loggedIn) {
+          this.storage.setItem("cc-evt-auth", JSON.stringify(true));
+          NavigationManager.goTo(Routes.Stream);
+        } else {
+          this.showAuth = true;
+        }
       } else {
-        this.showAuth = true;
+        let loggedIn = JSON.parse(
+          this.storage.getItem("cc-evt-auth") ?? "false"
+        );
+        const role = this.storage.getItem("cc-evt-role") ?? undefined;
+        if (loggedIn && !role) {
+          NavigationManager.goTo(Routes.Stream);
+        } else {
+          const popup = new PopUpMessage({
+            title: "Ocurrio un error",
+            message: "No estas conectado, conectate e intentalo de nuevo...",
+            type: NotificationType.Error,
+          });
+          popup.show();
+        }
       }
     },
   },

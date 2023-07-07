@@ -26,22 +26,42 @@ export default defineComponent({
   name: "EntryPass",
   mounted() {
     this.$nextTick(async () => {
+      const online = navigator.onLine;
       const user = FirebaseAuth.currentUser;
       if (user) {
-        let displayName = user.displayName ?? "";
-        displayName = displayName.replace(";", " ");
-        this.name = displayName.toUpperCase();
+        if (online) {
+          let displayName = user.displayName ?? "";
+          displayName = displayName.replace(";", " ");
+          this.name = displayName.toUpperCase();
+          const claims = await FirebaseAuth.getClaims(online);
+          this.id = claims["id"];
+          this.url = `https://storage.googleapis.com/eventos-5d8d7.appspot.com/credentials/${claims["credential"]}.png`;
+          this.storage.setItem("cc-evt-pass-name", this.name);
+          this.storage.setItem("cc-evt-pass-id", this.id);
+          this.storage.setItem("cc-evt-pass-url", this.url);
+          this.storage.setItem("cc-evt-auth", JSON.stringify(true));
+          this.storage.setItem(
+            "cc-evt-days",
+            JSON.stringify(claims.days ?? [])
+          );
+        } else {
+          this.name = this.storage.getItem("cc-evt-pass-name") ?? "Usuario";
+          this.id = this.storage.getItem("cc-evt-pass-id") ?? "CC XXXXXXXXX";
+          this.url = this.storage.getItem("cc-evt-pass-url") ?? "none";
+          this.days = JSON.parse(
+            this.storage.getItem("cc-evt-days") ?? "[]"
+          ) as Array<string>;
+        }
       }
-      const claims = await FirebaseAuth.getClaims();
-      this.id = claims["id"];
-      this.url = `https://storage.googleapis.com/eventos-5d8d7.appspot.com/credentials/${claims["credential"]}.png`;
     });
   },
   data() {
     return {
+      storage: window.localStorage,
       name: "",
       id: "",
       url: "",
+      days: [] as Array<string>,
     };
   },
   computed: {

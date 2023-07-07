@@ -10,6 +10,19 @@ export type Identification = "CC" | "CE" | "TI" | "PAS" | "NIT";
 
 export type Language = "es" | "pt" | "en";
 
+export type Origin =
+  | "efectivo"
+  | "premio"
+  | "online"
+  | "congregacion"
+  | "bono"
+  | "L"
+  | "M"
+  | "X"
+  | "J"
+  | "V"
+  | "S";
+
 export interface SignatureResponse {
   reference: string;
   hash: string;
@@ -33,6 +46,7 @@ export interface CriticalData {
   email: string;
   lvlup: string;
   group: string;
+  origin: Origin;
 }
 
 export interface DetailsData {
@@ -43,6 +57,11 @@ export interface DetailsData {
   address: string;
   city: string;
   whatsapp: string;
+}
+
+export interface PhotoData {
+  profilePic: string;
+  picture: File;
 }
 
 export interface PayUBody {

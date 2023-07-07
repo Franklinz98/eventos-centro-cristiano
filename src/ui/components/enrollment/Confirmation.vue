@@ -15,10 +15,16 @@
       <h3 class="data-value">{{ details.lastname }}</h3>
       <h3 class="data-name">Identificación</h3>
       <h3 class="data-value">{{ `${critical.idType} ${critical.id}` }}</h3>
-      <h3 class="data-name">LevelUp</h3>
-      <h3 class="data-value">{{ levelUpOptions[critical.lvlup] }}</h3>
-      <h3 class="data-name">R21</h3>
-      <h3 class="data-value">{{ critical.group ?? "N.A." }}</h3>
+      <h3 class="data-name" v-if="event === 'R21'">LevelUp</h3>
+      <h3 class="data-value" v-if="event === 'R21'">
+        {{ levelUpOptions[critical.lvlup] }}
+      </h3>
+      <h3 class="data-name" v-if="event === 'R21'">R21</h3>
+      <h3 class="data-value" v-if="event === 'R21'">
+        {{ critical.group ?? "N.A." }}
+      </h3>
+      <h3 class="data-name">Correo</h3>
+      <h3 class="data-value">{{ critical.email }}</h3>
       <h3 class="data-name">WhatsApp</h3>
       <h3 class="data-value">{{ details.whatsapp }}</h3>
       <h3 class="data-name">Dirección</h3>
@@ -84,6 +90,7 @@ export default defineComponent({
         CU: "Cuba",
         DO: "República Dominicana",
         EC: "Ecuador",
+        US: "Estados Unidos",
         SV: "El Salvador",
         ES: "España",
         GT: "Guatemala",

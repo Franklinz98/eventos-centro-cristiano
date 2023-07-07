@@ -4,6 +4,7 @@ import {
   DetailsData,
   EnrollmentMode,
   EventType,
+  Origin,
   SignatureResponse,
 } from "@/domain/interfaces/enrollment";
 import Attendee from "../models/attendee";
@@ -19,6 +20,17 @@ export default abstract class EnrollmentManager {
       country: "CO",
       idType: "CC",
       lvlup: "EC",
+      origin: "online",
+    } as CriticalData;
+  }
+
+  static get defaultStaffCriticalData(): CriticalData {
+    return {
+      mode: "F2F",
+      country: "CO",
+      idType: "CC",
+      lvlup: "EC",
+      origin: "efectivo",
     } as CriticalData;
   }
 
@@ -41,7 +53,8 @@ export default abstract class EnrollmentManager {
   // false: Already registered on this event.
   static async checkCriticalData(
     email: string,
-    enrollment: Enrollment
+    enrollment: Enrollment,
+    origin: string
   ): Promise<
     | { signature: SignatureResponse; data: DetailsData; available?: undefined }
     | { signature: SignatureResponse; available: boolean; data?: undefined }
@@ -51,11 +64,10 @@ export default abstract class EnrollmentManager {
       email,
       enrollment.event,
       cost.amount,
-      cost.currency
+      cost.currency,
+      origin
     );
-    console.log(result);
     if (result.attendee) {
-      console.log("resturning attendee");
       return {
         signature: result.signature,
         data: {
@@ -102,16 +114,24 @@ export default abstract class EnrollmentManager {
     return attendee;
   }
 
+  static async getSeats(): Promise<number> {
+    const result = await EnrollmentManager.service.getSeats();
+    if (result === 0) {
+      const popup = new PopUpMessage({
+        title: "No hay cupos",
+        message: "Lo sentimos no hay más cupos en modalidad presencial",
+        type: NotificationType.Error,
+      });
+      popup.show();
+    }
+    return result;
+  }
+
   static async preEnroll(
     attendee: Attendee,
-    update: boolean,
-    picture?: File
+    update: boolean
   ): Promise<boolean> {
-    const result = await EnrollmentManager.service.preEnroll(
-      attendee,
-      update,
-      picture
-    );
+    const result = await EnrollmentManager.service.preEnroll(attendee, update);
     return result;
   }
 
@@ -127,24 +147,37 @@ export default abstract class EnrollmentManager {
       signature
     );
     container.appendChild(form);
-    console.log(container);
     form.submit();
   }
 
   static async staffEnroll(
     attendee: Attendee,
-    enrollment: Enrollment
+    enrollment: Enrollment,
+    origin: Origin
   ): Promise<boolean> {
     const result = await EnrollmentManager.service.staffEnroll(
       attendee,
-      enrollment
+      enrollment,
+      origin
+    );
+    return result;
+  }
+
+  static async uploadPhoto(
+    email: string,
+    file: File,
+    oldPic?: string
+  ): Promise<boolean> {
+    const result = await EnrollmentManager.service.uploadsPhoto(
+      email,
+      file,
+      oldPic
     );
     return result;
   }
 
   static preFetchCredential(credentialId: string): void {
     const url = `https://storage.googleapis.com/eventos-5d8d7.appspot.com/credentials/${credentialId}.png`;
-    console.log(url);
     const img = new Image();
     img.src = url;
   }
